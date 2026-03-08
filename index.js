@@ -70,6 +70,25 @@ app.get('/', (req, res) => {
   })
 })
 
+// Route de test temporaire pour la base de données
+app.get('/test-db', async (req, res) => {
+  try {
+    const [results] = await sequelize.query('SELECT NOW() as "database_time"')
+    res.json({ 
+      success: true, 
+      message: 'Connexion à la base de données réussie !',
+      data: results[0] 
+    })
+  } catch (error) {
+    console.error('Erreur test-db:', error)
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erreur de connexion à la base de données',
+      error: error.message 
+    })
+  }
+})
+
 // Configurer Socket.IO (avant les routes pour être sûr)
 const httpServer = createServer(app)
 const io = new Server(httpServer, {
