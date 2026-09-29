@@ -3,8 +3,11 @@ import type { PaymentProvider } from '@prisma/client'
 
 export interface GatewayContext {
   paymentId: string
-  orderId: string
-  orderNumber: number
+  /** Libellé affiché par le fournisseur (ex. : « Commande Maison Braise n° 42 »). */
+  label: string
+  /** Page du site où revient le client après paiement, et en cas d'abandon. */
+  returnUrl: string
+  cancelUrl: string
   amount: number
   payerPhone?: string
   customerEmail?: string

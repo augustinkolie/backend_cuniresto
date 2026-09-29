@@ -159,3 +159,30 @@ export const mailTemplates = {
     }
   },
 }
+
+/** Confirmation d'inscription à une formation, envoyée une fois le paiement reçu. */
+export function enrollmentConfirmedMail(e: {
+  firstName: string
+  number: number
+  courseTitle: string
+  amount: number
+  schedule?: string | null
+  onSite: boolean
+}) {
+  return {
+    subject: `Inscription confirmée — ${e.courseTitle}`,
+    html: layout(
+      'Inscription confirmée',
+      `<p>Bonjour ${escapeHtml(e.firstName)},</p>
+<p>Votre paiement est bien reçu : votre place est réservée.</p>
+${rows([
+  ['Formation', e.courseTitle],
+  ['Inscription n°', e.number],
+  ['Montant payé', formatGnf(e.amount)],
+  ['Lieu', e.onSite ? 'Au restaurant Maison Braise' : 'En ligne'],
+  ['Horaires', e.schedule],
+])}
+<p>Nous vous contacterons quelques jours avant la première séance. À très bientôt en cuisine !</p>`,
+    ),
+  }
+}

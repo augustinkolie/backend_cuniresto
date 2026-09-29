@@ -22,23 +22,6 @@ interface LegacyDish {
   allergens?: string[]
 }
 
-interface LegacyAcademy {
-  courses: Array<{
-    title: string
-    instructor: string
-    level: string
-    duration: string
-    lessons: number
-    students: number
-    rating: number
-    price: number
-    image: string
-    category: string
-    description: string
-    modules: Array<{ title: string; duration: string }>
-  }>
-}
-
 const CATEGORIES = [
   { slug: 'lapin', name: 'Lapin braisé', description: 'Notre spécialité, cuite lentement sur la braise.' },
   { slug: 'atieke', name: 'Atiéké', description: 'Semoule de manioc et ses accompagnements.' },
@@ -149,24 +132,80 @@ async function seedRewards(): Promise<void> {
 }
 
 async function seedAcademy(): Promise<void> {
-  if ((await prisma.academyCourse.count()) === 0) {
-    const { courses } = read<LegacyAcademy>('academy.json')
+  // Trois formules de cuisine africaine données au restaurant (payables en ligne).
+  if ((await prisma.academyCourse.count({ where: { onSite: true } })) === 0) {
+    const photo = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=80`
+    const common = { onSite: true, category: 'Cours au restaurant', instructor: 'Le chef et la brigade Maison Braise', students: 0, rating: 0 }
     await prisma.academyCourse.createMany({
-      data: courses.map((c, position) => ({
-        title: c.title,
-        instructor: c.instructor,
-        level: c.level,
-        duration: c.duration,
-        lessons: c.lessons,
-        students: c.students,
-        rating: c.rating,
-        price: c.price,
-        imageUrl: c.image.startsWith('/images/spaghetti/') ? '/images/products/p2.jpg' : c.image,
-        category: c.category,
-        description: c.description,
-        modules: c.modules,
-        position,
-      })),
+      data: [
+        {
+          ...common,
+          position: -3,
+          title: 'Découverte — Initiation à la cuisine guinéenne',
+          level: 'Débutant',
+          duration: '1 séance de 3 h',
+          lessons: 1,
+          price: 75_000,
+          seats: 12,
+          schedule: 'Samedi 9 h – 12 h, au restaurant',
+          imageUrl: photo('1566554273541-37a9ca77b91f'),
+          description: 'Une matinée en cuisine pour découvrir les épices et les bases de la cuisine guinéenne, puis déguster ensemble ce que vous avez préparé.',
+          perks: ['Tous les ingrédients fournis', 'Tablier Maison Braise offert', 'Dégustation de vos plats sur place', 'Fiches recettes à emporter'],
+          modules: [
+            { title: 'Les épices et les bases de la cuisine guinéenne', duration: '45 min' },
+            { title: 'Riz gras pas à pas', duration: '1 h' },
+            { title: 'Sauce arachide', duration: '45 min' },
+            { title: 'Dégustation commentée', duration: '30 min' },
+          ],
+        },
+        {
+          ...common,
+          position: -2,
+          featured: true,
+          title: 'Essentiel — Les grands classiques africains',
+          level: 'Intermédiaire',
+          duration: '4 séances de 4 h',
+          lessons: 4,
+          price: 280_000,
+          seats: 10,
+          schedule: '4 samedis de suite, 9 h – 13 h, au restaurant',
+          imageUrl: photo('1565608087341-404b25492fee'),
+          description: 'Quatre samedis pour maîtriser les plats qui font la réputation de la maison : lapin braisé, atiéké, sauces et street food d’Afrique de l’Ouest.',
+          perks: ['Tous les ingrédients fournis', 'Tablier Maison Braise offert', 'Repas partagé à chaque séance', 'Carnet de 20 recettes de la maison'],
+          modules: [
+            { title: 'Lapin braisé mariné une nuit', duration: '4 h' },
+            { title: 'Atiéké et poisson braisé', duration: '4 h' },
+            { title: 'Sauce feuille et mafé', duration: '4 h' },
+            { title: 'Fataya, alloco et street food', duration: '4 h' },
+          ],
+        },
+        {
+          ...common,
+          position: -1,
+          title: 'Maître du feu — Formation complète braise & cuisine africaine',
+          level: 'Avancé',
+          duration: '8 séances sur 4 semaines',
+          lessons: 8,
+          price: 650_000,
+          seats: 6,
+          schedule: 'Mardis et jeudis, 14 h – 18 h, en cuisine avec la brigade',
+          imageUrl: photo('1687422808277-2334638f09fb'),
+          description: 'La formation complète, en petit groupe et aux côtés de notre brigade : feu, marinades, découpe, cuissons, dressage, jusqu’au service d’un plat en salle.',
+          perks: [
+            'Travail en cuisine avec la brigade',
+            'Une soirée de service au restaurant',
+            'Tablier et couteau de chef offerts',
+            'Suivi personnalisé par le chef',
+          ],
+          modules: [
+            { title: 'Maîtriser le feu et le charbon', duration: '4 h' },
+            { title: 'Marinades et épices d’Afrique de l’Ouest', duration: '4 h' },
+            { title: 'Découpe et préparation du lapin', duration: '4 h' },
+            { title: 'Grillades, braisés et sauces', duration: '8 h' },
+            { title: 'Dressage et service en salle', duration: '8 h' },
+          ],
+        },
+      ],
     })
   }
   if ((await prisma.academyResource.count()) === 0) {

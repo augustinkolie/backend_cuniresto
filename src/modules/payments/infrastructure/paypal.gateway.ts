@@ -35,7 +35,7 @@ export class PayPalGateway implements PaymentGateway {
         {
           reference_id: ctx.paymentId,
           custom_id: ctx.paymentId,
-          description: `Commande Maison Braise n° ${ctx.orderNumber}`,
+          description: ctx.label,
           amount: { currency_code: this.config.get('PAYPAL_CURRENCY'), value: this.convert(ctx.amount) },
         },
       ],

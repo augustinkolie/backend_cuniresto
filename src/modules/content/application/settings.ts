@@ -49,5 +49,5 @@ export const DEFAULT_SETTINGS: { [K in SettingKey]: z.infer<(typeof settingSchem
 }
 
 /** Blocs de texte éditables (accueil, à propos…). */
-export const CONTENT_KEYS = ['home', 'about', 'chef', 'contact', 'terms', 'privacy', 'help'] as const
+export const CONTENT_KEYS = ['home', 'about', 'chef', 'contact', 'reservation', 'terms', 'privacy', 'help'] as const
 export type ContentKey = (typeof CONTENT_KEYS)[number]

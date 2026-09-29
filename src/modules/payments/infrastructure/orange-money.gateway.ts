@@ -27,7 +27,6 @@ export class OrangeMoneyGateway implements PaymentGateway {
 
   async initiate(ctx: GatewayContext): Promise<GatewayInitiation> {
     const base = `${this.config.get('OM_API_URL')}${this.config.get('OM_WEBPAY_PATH')}`
-    const web = this.config.get('WEB_URL')
     const notifUrl = new URL('/api/v1/payments/webhooks/orange-money', this.config.get('API_URL'))
     notifUrl.searchParams.set('s', this.config.get('OM_WEBHOOK_SECRET')!)
 
@@ -43,11 +42,11 @@ export class OrangeMoneyGateway implements PaymentGateway {
         currency: this.config.get('OM_CURRENCY'),
         order_id: ctx.paymentId,
         amount: ctx.amount,
-        return_url: `${web}/commande/${ctx.orderId}?paiement=retour`,
-        cancel_url: `${web}/panier?paiement=annule`,
+        return_url: ctx.returnUrl,
+        cancel_url: ctx.cancelUrl,
         notif_url: notifUrl.toString(),
         lang: 'fr',
-        reference: `Maison Braise n° ${ctx.orderNumber}`,
+        reference: ctx.label,
       }),
     })
     const data = (await res.json().catch(() => ({}))) as {

@@ -10,9 +10,15 @@ import {
   PaymentError,
   ValidationError,
 } from '../../../shared/domain/domain-error'
-import { Events, type PaymentFailedEvent, type PaymentSucceededEvent } from '../../../shared/events'
+import {
+  type EnrollmentPaymentEvent,
+  Events,
+  type PaymentFailedEvent,
+  type PaymentSucceededEvent,
+} from '../../../shared/events'
 import { PAYMENT_GATEWAYS, type PaymentGateway, type PaymentOutcome } from './payment-gateway'
 import type {
+  InitiateEnrollmentPaymentCommand,
   InitiatePaymentCommand,
   PaymentInitiation,
   PaymentInitiator,
@@ -40,31 +46,57 @@ export class PaymentsService implements PaymentInitiator {
   }
 
   async initiate(cmd: InitiatePaymentCommand): Promise<PaymentInitiation> {
-    const gateway = this.gateway(cmd.method)
-    const payment = await this.prisma.payment.create({
-      data: {
-        orderId: cmd.orderId,
-        provider: cmd.method,
-        amount: cmd.amount,
-        payerPhone: cmd.payerPhone,
+    const web = this.config.get('WEB_URL')
+    return this.start(
+      { orderId: cmd.orderId, provider: cmd.method, amount: cmd.amount, payerPhone: cmd.payerPhone },
+      {
+        label: `Commande Maison Braise n° ${cmd.orderNumber}`,
+        returnUrl: `${web}/commande/${cmd.orderId}?paiement=retour`,
+        cancelUrl: `${web}/panier?paiement=annule`,
+        simulationUrl: `${web}/paiement/simulation?commande=${cmd.orderId}`,
+        customerEmail: cmd.customerEmail,
       },
-    })
+    )
+  }
+
+  async initiateEnrollment(cmd: InitiateEnrollmentPaymentCommand): Promise<PaymentInitiation> {
+    const web = this.config.get('WEB_URL')
+    const page = `${web}/academie/inscription/${cmd.enrollmentId}`
+    return this.start(
+      { enrollmentId: cmd.enrollmentId, provider: cmd.method, amount: cmd.amount, payerPhone: cmd.payerPhone },
+      {
+        label: `Formation Maison Braise — ${cmd.courseTitle} (inscription n° ${cmd.enrollmentNumber})`,
+        returnUrl: `${page}?paiement=retour`,
+        cancelUrl: `${page}?paiement=annule`,
+        simulationUrl: `${web}/paiement/simulation?inscription=${cmd.enrollmentId}`,
+        customerEmail: cmd.customerEmail,
+      },
+    )
+  }
+
+  /** Crée le paiement puis ouvre la session chez le fournisseur (ou la page de simulation en développement). */
+  private async start(
+    data: { orderId?: string; enrollmentId?: string; provider: PaymentProvider; amount: number; payerPhone?: string },
+    ctx: { label: string; returnUrl: string; cancelUrl: string; simulationUrl: string; customerEmail?: string },
+  ): Promise<PaymentInitiation> {
+    const gateway = this.gateway(data.provider)
+    const payment = await this.prisma.payment.create({ data })
 
     if (!gateway.isConfigured()) {
       if (this.config.isProduction) throw new PaymentError('Ce moyen de paiement est indisponible')
       // Développement : page de simulation au lieu du vrai fournisseur.
-      const checkoutUrl = `${this.config.get('WEB_URL')}/paiement/simulation?commande=${cmd.orderId}`
-      await this.prisma.payment.update({ where: { id: payment.id }, data: { checkoutUrl } })
-      return { checkoutUrl, instructions: 'Mode simulation : aucun paiement réel.' }
+      await this.prisma.payment.update({ where: { id: payment.id }, data: { checkoutUrl: ctx.simulationUrl } })
+      return { checkoutUrl: ctx.simulationUrl, instructions: 'Mode simulation : aucun paiement réel.' }
     }
 
     const result = await gateway.initiate({
       paymentId: payment.id,
-      orderId: cmd.orderId,
-      orderNumber: cmd.orderNumber,
-      amount: cmd.amount,
-      payerPhone: cmd.payerPhone,
-      customerEmail: cmd.customerEmail,
+      label: ctx.label,
+      returnUrl: ctx.returnUrl,
+      cancelUrl: ctx.cancelUrl,
+      amount: data.amount,
+      payerPhone: data.payerPhone,
+      customerEmail: ctx.customerEmail,
     })
     await this.prisma.payment.update({
       where: { id: payment.id },
@@ -95,11 +127,19 @@ export class PaymentsService implements PaymentInitiator {
     })
     if (count === 0) return
 
-    const { orderId } = await this.prisma.payment.findUniqueOrThrow({
+    const { orderId, enrollmentId } = await this.prisma.payment.findUniqueOrThrow({
       where: { id: outcome.paymentId },
-      select: { orderId: true },
+      select: { orderId: true, enrollmentId: true },
     })
     this.logger.log(`Paiement ${outcome.paymentId} : ${outcome.succeeded ? 'réussi' : 'échoué'}`)
+    if (enrollmentId) {
+      await this.events.emitAsync(
+        outcome.succeeded ? Events.EnrollmentPaymentSucceeded : Events.EnrollmentPaymentFailed,
+        { enrollmentId } satisfies EnrollmentPaymentEvent,
+      )
+      return
+    }
+    if (!orderId) return
     if (outcome.succeeded) {
       await this.events.emitAsync(Events.PaymentSucceeded, { orderId } satisfies PaymentSucceededEvent)
     } else {
@@ -126,7 +166,7 @@ export class PaymentsService implements PaymentInitiator {
       include: { order: { select: { userId: true, status: true } } },
     })
     if (!payment) throw new NotFoundError('Paiement')
-    if (payment.order.userId !== user.id && !isStaff(user)) throw new ForbiddenError('Accès refusé')
+    if (!payment.order || (payment.order.userId !== user.id && !isStaff(user))) throw new ForbiddenError('Accès refusé')
     return {
       provider: payment.provider,
       status: payment.status,
@@ -144,7 +184,23 @@ export class PaymentsService implements PaymentInitiator {
       include: { order: { select: { userId: true } } },
     })
     if (!payment) throw new NotFoundError('Paiement')
-    if (payment.order.userId !== user.id) throw new ForbiddenError('Accès refusé')
+    if (payment.order?.userId !== user.id) throw new ForbiddenError('Accès refusé')
+    await this.simulateOutcome(payment, succeeded)
+  }
+
+  /** Simulation d'un paiement d'inscription (hors production). */
+  async simulateEnrollment(enrollmentId: string, user: AuthUser, succeeded: boolean): Promise<void> {
+    if (this.config.isProduction) throw new ForbiddenError('Simulation désactivée en production')
+    const payment = await this.prisma.payment.findUnique({
+      where: { enrollmentId },
+      include: { enrollment: { select: { userId: true } } },
+    })
+    if (!payment) throw new NotFoundError('Paiement')
+    if (payment.enrollment?.userId !== user.id) throw new ForbiddenError('Accès refusé')
+    await this.simulateOutcome(payment, succeeded)
+  }
+
+  private async simulateOutcome(payment: { id: string; provider: PaymentProvider }, succeeded: boolean): Promise<void> {
     if (this.gateway(payment.provider).isConfigured()) {
       throw new ValidationError('Ce moyen de paiement est réel, simulation impossible')
     }

@@ -26,7 +26,6 @@ export class StripeGateway implements PaymentGateway {
   }
 
   async initiate(ctx: GatewayContext): Promise<GatewayInitiation> {
-    const web = this.config.get('WEB_URL')
     try {
       const session = await this.stripe().checkout.sessions.create({
         mode: 'payment',
@@ -38,13 +37,13 @@ export class StripeGateway implements PaymentGateway {
             price_data: {
               currency: 'gnf',
               unit_amount: ctx.amount,
-              product_data: { name: `Commande Maison Braise n° ${ctx.orderNumber}` },
+              product_data: { name: ctx.label },
             },
           },
         ],
-        metadata: { paymentId: ctx.paymentId, orderId: ctx.orderId },
-        success_url: `${web}/commande/${ctx.orderId}?paiement=retour`,
-        cancel_url: `${web}/panier?paiement=annule`,
+        metadata: { paymentId: ctx.paymentId },
+        success_url: ctx.returnUrl,
+        cancel_url: ctx.cancelUrl,
         expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       })
       return { providerRef: session.id, checkoutUrl: session.url, instructions: null }

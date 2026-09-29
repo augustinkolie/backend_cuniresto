@@ -14,6 +14,8 @@ export const Events = {
   OrderStatusChanged: 'order.status-changed',
   PaymentSucceeded: 'payment.succeeded',
   PaymentFailed: 'payment.failed',
+  EnrollmentPaymentSucceeded: 'enrollment.payment-succeeded',
+  EnrollmentPaymentFailed: 'enrollment.payment-failed',
   ReservationCreated: 'reservation.created',
   ReservationStatusChanged: 'reservation.status-changed',
   MenuUpdated: 'menu.updated',
@@ -78,4 +80,8 @@ export interface MenuUpdatedEvent {
 export interface WaiterCalledEvent {
   orderId: string | null
   tableNumber: number
+}
+
+export interface EnrollmentPaymentEvent {
+  enrollmentId: string
 }

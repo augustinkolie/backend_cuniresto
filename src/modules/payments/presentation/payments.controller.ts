@@ -66,6 +66,16 @@ export class PaymentsController {
     return this.payments.simulate(orderId, user, dto.succeeded)
   }
 
+  @Post('enrollments/:enrollmentId/simulate')
+  @HttpCode(204)
+  simulateEnrollment(
+    @CurrentUser() user: AuthUser,
+    @Param('enrollmentId', uuid) enrollmentId: string,
+    @Body() dto: SimulateDto,
+  ) {
+    return this.payments.simulateEnrollment(enrollmentId, user, dto.succeeded)
+  }
+
   @Roles('MANAGER', 'WAITER')
   @Post(':orderId/mark-paid')
   @HttpCode(204)
@@ -138,7 +148,11 @@ export class PaymentsController {
         reason: captured ? undefined : 'capture refusée',
       })
     }
-    return res.redirect(`${web}/commande/${payment.orderId}?paiement=retour`)
+    return res.redirect(
+      payment.enrollmentId
+        ? `${web}/academie/inscription/${payment.enrollmentId}?paiement=retour`
+        : `${web}/commande/${payment.orderId}?paiement=retour`,
+    )
   }
 
   @Public()
@@ -154,6 +168,9 @@ export class PaymentsController {
         reason: 'annulé par le client',
       })
     }
-    return res.redirect(`${this.config.get('WEB_URL')}/panier?paiement=annule`)
+    const web = this.config.get('WEB_URL')
+    return res.redirect(
+      payment?.enrollmentId ? `${web}/academie/inscription/${payment.enrollmentId}?paiement=annule` : `${web}/panier?paiement=annule`,
+    )
   }
 }

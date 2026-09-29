@@ -48,6 +48,7 @@ model User {
   addresses          Address[]
   cart               Cart?
   orders             Order[]
+  enrollments        CourseEnrollment[]
   reservations       Reservation[]
   reviews            Review[]
   reviewReplies      ReviewReply[]
@@ -175,15 +176,15 @@ model Dish {
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
 
-  category        Category          @relation(fields: [categoryId], references: [id])
-  options         DishOption[]
-  cartItems       CartItem[]
-  orderItems      OrderItem[]
-  reviews         Review[]
-  favorites       FavoriteDish[]
-  companyPrices   CompanyPrice[]
-  corporateItems  CorporateOrderItem[]
-  chefContents    ChefContent[]
+  category       Category             @relation(fields: [categoryId], references: [id])
+  options        DishOption[]
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  reviews        Review[]
+  favorites      FavoriteDish[]
+  companyPrices  CompanyPrice[]
+  corporateItems CorporateOrderItem[]
+  chefContents   ChefContent[]
 
   @@index([categoryId])
   @@index([isFeatured])
@@ -247,13 +248,13 @@ enum OrderStatus {
 }
 
 model Order {
-  id               String      @id @default(uuid()) @db.Uuid
-  number           Int         @unique @default(autoincrement())
-  userId           String?     @db.Uuid
+  id               String        @id @default(uuid()) @db.Uuid
+  number           Int           @unique @default(autoincrement())
+  userId           String?       @db.Uuid
   type             OrderType
-  status           OrderStatus @default(PENDING_PAYMENT)
+  status           OrderStatus   @default(PENDING_PAYMENT)
   subtotal         Int
-  deliveryFee      Int         @default(0)
+  deliveryFee      Int           @default(0)
   deliveryMode     DeliveryMode?
   total            Int
   contactName      String?
@@ -262,13 +263,13 @@ model Order {
   deliveryCity     String?
   instructions     String?
   tastePreferences String?
-  tableId          String?     @db.Uuid
+  tableId          String?       @db.Uuid
   waiterCalledAt   DateTime?
   servedAt         DateTime?
   completedAt      DateTime?
   cancelledAt      DateTime?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   user     User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   table    Table?      @relation(fields: [tableId], references: [id], onDelete: SetNull)
@@ -310,20 +311,23 @@ enum PaymentStatus {
 }
 
 model Payment {
-  id          String          @id @default(uuid()) @db.Uuid
-  orderId     String          @unique @db.Uuid
-  provider    PaymentProvider
-  status      PaymentStatus   @default(PENDING)
-  amount      Int
-  currency    String          @default("GNF")
-  providerRef String?         @unique
+  id           String            @id @default(uuid()) @db.Uuid
+  // Un paiement concerne soit une commande, soit une inscription à une formation.
+  orderId      String?           @unique @db.Uuid
+  enrollmentId String?           @unique @db.Uuid
+  provider     PaymentProvider
+  status       PaymentStatus     @default(PENDING)
+  amount       Int
+  currency     String            @default("GNF")
+  providerRef  String?           @unique
   // Jeton de notification propre au fournisseur (Orange Money), comparé à chaque webhook.
   webhookToken String?
-  checkoutUrl String?
-  payerPhone  String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  order       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  checkoutUrl  String?
+  payerPhone   String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  order        Order?            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  enrollment   CourseEnrollment? @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
 }
 
 // Clé d'idempotence des webhooks de paiement.
@@ -574,9 +578,9 @@ model LoyaltyTransaction {
   createdAt   DateTime       @default(now())
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, createdAt])
   // Empêche d'attribuer deux fois les points d'une même commande.
   @@unique([userId, type, orderId])
+  @@index([userId, createdAt])
 }
 
 enum RewardType {
@@ -679,26 +683,26 @@ enum BillingCycle {
 }
 
 model Company {
-  id                String            @id @default(uuid()) @db.Uuid
+  id                String             @id @default(uuid()) @db.Uuid
   name              String
-  email             String            @unique
+  email             String             @unique
   phone             String
   street            String?
   city              String?
   contactName       String?
   contactEmail      String?
   contactPhone      String?
-  discountPercent   Int               @default(0)
-  billingCycle      BillingCycle      @default(MONTHLY)
-  paymentTermsDays  Int               @default(30)
-  currentBalance    Int               @default(0)
-  status            CompanyStatus     @default(ACTIVE)
-  adminId           String            @db.Uuid
-  subscriptionStart DateTime          @default(now())
+  discountPercent   Int                @default(0)
+  billingCycle      BillingCycle       @default(MONTHLY)
+  paymentTermsDays  Int                @default(30)
+  currentBalance    Int                @default(0)
+  status            CompanyStatus      @default(ACTIVE)
+  adminId           String             @db.Uuid
+  subscriptionStart DateTime           @default(now())
   subscriptionEnd   DateTime?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  admin             User              @relation(fields: [adminId], references: [id])
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  admin             User               @relation(fields: [adminId], references: [id])
   employees         CompanyEmployee[]
   prices            CompanyPrice[]
   orders            CorporateOrder[]
@@ -745,26 +749,26 @@ enum Recurrence {
 }
 
 model CorporateOrder {
-  id             String               @id @default(uuid()) @db.Uuid
-  companyId      String               @db.Uuid
-  employeeId     String               @db.Uuid
-  status         CorporateOrderStatus @default(PENDING)
-  total          Int
-  deliveryStreet String?
-  deliveryCity   String?
-  deliveryDate   DateTime?
-  recurrence     Recurrence           @default(NONE)
-  recurrenceDays Int[]                @default([])
+  id              String               @id @default(uuid()) @db.Uuid
+  companyId       String               @db.Uuid
+  employeeId      String               @db.Uuid
+  status          CorporateOrderStatus @default(PENDING)
+  total           Int
+  deliveryStreet  String?
+  deliveryCity    String?
+  deliveryDate    DateTime?
+  recurrence      Recurrence           @default(NONE)
+  recurrenceDays  Int[]                @default([])
   // Commande modèle d'une récurrence : date de la dernière occurrence générée.
   lastGeneratedAt DateTime?
-  parentOrderId  String?              @db.Uuid
-  notes          String?
-  invoiceId      String?              @db.Uuid
-  createdAt      DateTime             @default(now())
-  company        Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employee       User                 @relation(fields: [employeeId], references: [id])
-  invoice        CorporateInvoice?    @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  items          CorporateOrderItem[]
+  parentOrderId   String?              @db.Uuid
+  notes           String?
+  invoiceId       String?              @db.Uuid
+  createdAt       DateTime             @default(now())
+  company         Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employee        User                 @relation(fields: [employeeId], references: [id])
+  invoice         CorporateInvoice?    @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  items           CorporateOrderItem[]
 
   @@index([companyId, createdAt])
 }
@@ -1019,21 +1023,58 @@ model ChefContentLike {
 }
 
 model AcademyCourse {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String             @id @default(uuid()) @db.Uuid
   title       String
   instructor  String
   level       String
   duration    String
   lessons     Int
-  students    Int      @default(0)
-  rating      Float    @default(0)
+  students    Int                @default(0)
+  rating      Float              @default(0)
   price       Int
   imageUrl    String
   category    String
   description String
   modules     Json
-  position    Int      @default(0)
-  createdAt   DateTime @default(now())
+  position    Int                @default(0)
+  // Formule donnée au restaurant (en présentiel), mise en avant en haut de l'académie.
+  onSite      Boolean            @default(false)
+  // Formule recommandée (mise en valeur parmi les formules).
+  featured    Boolean            @default(false)
+  // Ex. : « Samedi 9 h – 13 h, au restaurant ».
+  schedule    String?
+  // Places par session (null = illimité).
+  seats       Int?
+  // Ce qui est inclus (liste de textes).
+  perks       Json               @default("[]")
+  createdAt   DateTime           @default(now())
+  enrollments CourseEnrollment[]
+}
+
+enum EnrollmentStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  CANCELLED
+}
+
+model CourseEnrollment {
+  id          String           @id @default(uuid()) @db.Uuid
+  number      Int              @unique @default(autoincrement())
+  courseId    String?          @db.Uuid
+  // Copie du titre et du prix : l'historique ne change pas si la formation est modifiée.
+  courseTitle String
+  amount      Int
+  userId      String           @db.Uuid
+  phone       String?
+  status      EnrollmentStatus @default(PENDING_PAYMENT)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  course      AcademyCourse?   @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment     Payment?
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 model AcademyResource {

@@ -1,4 +1,4 @@
-// Port public du module paiements, utilisé par les commandes.
+// Port public du module paiements, utilisé par les commandes et les inscriptions aux formations.
 
 export const PAYMENT_INITIATOR = Symbol('PAYMENT_INITIATOR')
 
@@ -20,6 +20,17 @@ export interface PaymentInitiation {
   instructions: string | null
 }
 
+export interface InitiateEnrollmentPaymentCommand {
+  enrollmentId: string
+  enrollmentNumber: number
+  courseTitle: string
+  amount: number
+  method: OnlinePaymentMethod
+  payerPhone?: string
+  customerEmail?: string
+}
+
 export interface PaymentInitiator {
   initiate(cmd: InitiatePaymentCommand): Promise<PaymentInitiation>
+  initiateEnrollment(cmd: InitiateEnrollmentPaymentCommand): Promise<PaymentInitiation>
 }
