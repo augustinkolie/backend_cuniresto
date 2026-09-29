@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "name": "Plats",
+    "slug": "plats",
+    "image": "/images/lapin/lap9.jpg",
+    "description": "Nos plats traditionnels préparés avec passion",
+    "productCount": 18
+  },
+  {
+    "id": 2,
+    "name": "Sandwichs",
+    "slug": "sandwichs",
+    "image": "/images/sandwiches/san2.jpg",
+    "description": "Sandwichs frais et gourmands",
+    "productCount": 6
+  },
+  {
+    "id": 3,
+    "name": "Boissons",
+    "slug": "boissons",
+    "image": "/images/boissons/bo1.jpg",
+    "description": "Nos boissons rafraîchissantes et naturelles",
+    "productCount": 6
+  },
+  {
+    "id": 4,
+    "name": "Desserts",
+    "slug": "desserts",
+    "image": "/images/desserts/de2.jpg",
+    "description": "Desserts maison et gourmands",
+    "productCount": 12
+  }
+]

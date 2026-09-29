@@ -1,58 +1,12 @@
-# ===========================
-# VARIABLES D'ENVIRONNEMENT
-# ===========================
-# Contient les mots de passe, clés API, secrets JWT → NE JAMAIS PUBLIER
+node_modules/
+dist/
+.next/
+coverage/
+*.log
 .env
-.env_production
 .env.*
 !.env.example
-
-# ===========================
-# DÉPENDANCES NODE
-# ===========================
-node_modules/
-
-# ===========================
-# FICHIERS UPLOADÉS PAR LES UTILISATEURS
-# ===========================
-# Photos de profil, images produits, couvertures → volumineuses et privées
 uploads/
-
-# ===========================
-# LOGS
-# ===========================
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# ===========================
-# SCRIPTS DE DÉVELOPPEMENT / TEST
-# ===========================
-test_smtp.js
-scripts/
-
-# ===========================
-# FICHIERS SYSTÈME
-# ===========================
 .DS_Store
 Thumbs.db
-desktop.ini
-
-# ===========================
-# ÉDITEURS & IDE
-# ===========================
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-
-# ===========================
-# BUILDS / CACHE
-# ===========================
-dist/
-build/
-.cache/
+next-env.d.ts

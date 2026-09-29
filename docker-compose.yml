@@ -1,0 +1,49 @@
+# Services d'infrastructure pour le développement local.
+# Lancer : pnpm db:up
+name: maison-braise
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: braise-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-braise}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-braise}
+      POSTGRES_DB: ${POSTGRES_DB:-maison_braise}
+    ports:
+      - '${POSTGRES_PORT:-5433}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-braise} -d ${POSTGRES_DB:-maison_braise}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: braise-redis
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Boîte mail de développement : les e-mails envoyés par l'API sont visibles sur http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: braise-mailpit
+    restart: unless-stopped
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+volumes:
+  postgres-data:
+  redis-data:
