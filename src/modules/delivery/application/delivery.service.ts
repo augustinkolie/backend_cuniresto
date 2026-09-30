@@ -112,9 +112,13 @@ export class DeliveryService {
     })
   }
 
-  forDriver(driverId: string) {
+  /** Courses du livreur connecté ; un manager ou un admin voit toutes les courses en cours. */
+  forDriver(user: AuthUser) {
     return this.prisma.delivery.findMany({
-      where: { driverId, status: { in: ACTIVE_DELIVERY_STATUSES } },
+      where: {
+        status: { in: ACTIVE_DELIVERY_STATUSES },
+        ...(isManager(user) ? {} : { driverId: user.id }),
+      },
       include: deliveryInclude,
       orderBy: { createdAt: 'asc' },
     })

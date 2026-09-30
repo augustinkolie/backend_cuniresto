@@ -67,7 +67,7 @@ export class DeliveryController {
   @Roles('DRIVER', 'MANAGER')
   @Get('driver/deliveries')
   mine(@CurrentUser() user: AuthUser) {
-    return this.deliveries.forDriver(user.id)
+    return this.deliveries.forDriver(user)
   }
 
   @Roles('DRIVER', 'MANAGER')

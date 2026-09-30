@@ -11,6 +11,9 @@ export const settingSchemas = {
     address: z.string().max(200),
     city: z.string().max(80),
     mapUrl: z.url().optional(),
+    // Position du restaurant sur le plan de la page Contact.
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
     socials: z
       .object({
         facebook: z.url().optional(),
@@ -38,6 +41,9 @@ export const DEFAULT_SETTINGS: { [K in SettingKey]: z.infer<(typeof settingSchem
     email: 'contact@maisonbraise.gn',
     address: 'Kaloum, avenue de la République',
     city: 'Conakry',
+    // Kaloum, avenue de la République (à ajuster dans Administration > Paramètres).
+    latitude: 9.5092,
+    longitude: -13.7122,
     socials: {},
   },
   reservations: {

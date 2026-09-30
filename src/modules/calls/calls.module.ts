@@ -77,6 +77,7 @@ export class CallsService implements OnModuleDestroy {
 
     if (!this.realtime.isOnline(receiverId)) {
       await this.finish(call.id, 'MISSED')
+      await this.notifyMissed(receiverId, caller.id, conversationId)
       return { ok: false, error: 'Votre correspondant n’est pas joignable' }
     }
 
@@ -130,6 +131,16 @@ export class CallsService implements OnModuleDestroy {
     const other = call.callerId === user.id ? call.receiverId : call.callerId
     this.realtime.toUser(other, 'call:signal', { callId, data })
     return { ok: true }
+  }
+
+  /** Qui, parmi les autres membres de la conversation, a l'application ouverte en ce moment. */
+  async presence(conversationId: string, userId: string) {
+    await this.messaging.membership(conversationId, userId)
+    const members = await this.prisma.conversationMember.findMany({
+      where: { conversationId, userId: { not: userId } },
+      select: { userId: true },
+    })
+    return Object.fromEntries(members.map((m) => [m.userId, this.realtime.isOnline(m.userId)]))
   }
 
   async history(conversationId: string, userId: string) {
@@ -257,6 +268,11 @@ export class CallsController {
   @Get('calls')
   recent(@CurrentUser() user: AuthUser) {
     return this.calls.recent(user.id)
+  }
+
+  @Get('conversations/:id/presence')
+  presence(@CurrentUser() user: AuthUser, @Param('id', uuid) id: string) {
+    return this.calls.presence(id, user.id)
   }
 
   @Get('conversations/:id/calls')
